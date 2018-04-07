@@ -1,5 +1,7 @@
 import time
 import datetime
+import os
+import pickle
 
 
 class Incomes:
@@ -25,13 +27,20 @@ class Incomes:
         else:
             """Treat as number of days between checks"""
             dateToAdd = self.dateOfFirstCheck
-            while(self.dateOfFirstCheck.year != int(year)):
-                dateToAdd = dateToAdd + datetime.timedelta(days = int(self.days[0]))
+            while(dateToAdd.year == int(year)):
+                dateToAdd = dateToAdd - datetime.timedelta(days = int(self.days[0]))
+
+            dateToAdd = dateToAdd + datetime.timedelta(days = int(self.days[0]))
             while(dateToAdd.year == int(year)):
                 datesToReturn.append(dateToAdd)
                 dateToAdd = dateToAdd + datetime.timedelta(days = int(self.days[0]))
 
         return datesToReturn
+
+
+
+    def toString(self):
+        return "Income\nName: %s\nNet Income: %s\nDate of first check: %s\nPaycheck Frequency: %s\n" % (self.name, self.netIncome, self.dateOfFirstCheck, self.days)
 
 
 """Contains prompts to populate an Incomes object"""
@@ -61,13 +70,53 @@ def inputAnIncome():
         else:
             selection = input("Please enter '1' for fixed dates of pay or '2' for number of days between checks: ")
 
-
     return Incomes(inputName,inputDays,inputNetIncome,inputDateOfInitialCheck)
 
+def saveToFile(objectToSave):
+        foldername = str(objectToSave.__class__)
+        foldername = foldername[17:-2]
+        print(foldername)
+        filename = foldername + "\\" + objectToSave.name + ".txt"
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "wb") as f:
+           pickle.dump(objectToSave, f, pickle.HIGHEST_PROTOCOL)
 
-testIncome = inputAnIncome()
+def openFile(filepath):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "rb") as f:
+        return pickle.load(f)
 
-print(testIncome.getCheckDatesForYear(2018))
+
+
+def deleteFile(objectToDetele):
+    foldername = str(objectToDetele.__class__)
+    foldername = foldername[17:-2]
+    filename = foldername + "\\" + objectToDetele.name + ".txt"
+    try:
+        os.remove(filename)
+    except:
+        print("Delete failed...")
+
+
+
+"""testIncome = inputAnIncome()"""
+incomes = []
+
+incomes.append(Incomes("Metagenics", [14], 1100, datetime.date(2018,3,23)))
+incomes.append(Incomes("CleanStart", [7,22], 1100, datetime.date(2018,3,22)))
+
+print(incomes[0].toString())
+print(incomes[1].toString())
+
+print(incomes[0].getCheckDatesForYear(2018))
+print(incomes[1].getCheckDatesForYear(2018))
+
+saveToFile(incomes[0])
+saveToFile(incomes[1])
+
+
+
+
 
 
 
