@@ -1,6 +1,7 @@
 import datetime
 import os
 import pickle
+import csv
 
 
 class Income:
@@ -9,10 +10,10 @@ class Income:
     """
     myDays = []
     myName = None
-    myNetIncome = None
+    myAmount = None
     myDateOfFirstCheck = None
 
-    def __init__(self, theName, theDays, theNetIncome, theDateOfFirstCheck):
+    def __init__(self, theName, theDays, theAmount, theDateOfFirstCheck):
         """
         :param theName: of the income source (str)
         :param theDays: for payment ([1],[2,3])
@@ -21,10 +22,10 @@ class Income:
         """
         self.myDays = theDays
         self.myName = theName
-        self.myNetIncome = theNetIncome
+        self.myAmount = theAmount
         self.myDateOfFirstCheck = theDateOfFirstCheck
 
-    def getCheckDatesForRange(self, theStartDate, theEndDate):
+    def getDatesForRange(self, theStartDate, theEndDate):
         """
         Returns a list of all the dates for paychecks within the given date range.
         :param theStartDate:
@@ -35,20 +36,27 @@ class Income:
 
         if (len(self.myDays) > 1):
             # Treat as fixed days in the month
-            for x in range(theStartDate.year, theEndDate.year):  # year
-                for y in range(1, 12):  # month
+
+
+            newStartDate = theStartDate.year if (datetime.date.today() < theStartDate) else datetime.date.today().year
+            endDate = theEndDate.year if (theStartDate.year != theEndDate.year) else theEndDate.year + 1
+            for x in range(newStartDate, endDate):  # year
+                startMonth = newStartDate if x == newStartDate else 1
+                endMonth = theEndDate.month if x == theEndDate.year else 12
+                for y in range(startMonth, endMonth):  # month
                     for z in self.myDays:  # day
                         datesToReturn.append(datetime.date(int(x), int(y), int(z)))
+
         else:
             # Treat as number of days between checks
             dateToAdd = self.myDateOfFirstCheck
-
+            newStartDate = theStartDate if (datetime.date.today() < theStartDate) else datetime.date.today()
             # if dateToAdd == theStartDate... Perfect!
             while (
-                dateToAdd > theStartDate):  # brings dateToAdd to one check before theStartDate if dateToAdd is greater
+                dateToAdd > newStartDate):  # brings dateToAdd to one check before theStartDate if dateToAdd is greater
                 dateToAdd = dateToAdd - datetime.timedelta(days=int(self.myDays[0]))
 
-            while (dateToAdd < theStartDate):  # brings dateToAdd to the first check after theStartDate
+            while (dateToAdd < newStartDate):  # brings dateToAdd to the first check after theStartDate
                 dateToAdd = dateToAdd + datetime.timedelta(days=int(self.myDays[0]))
 
             while (dateToAdd <= theEndDate):  # add all paycheck dates for the range
@@ -62,7 +70,7 @@ class Income:
         :return: the string representation for the current class.
         """
         return "Name: %s\nNet Income: %s\nDate of first check: %s\nPaycheck Frequency: %s\n" % (
-        self.myName, self.myNetIncome, self.myDateOfFirstCheck, self.myDays)
+            self.myName, self.myAmount, self.myDateOfFirstCheck, self.myDays)
 
 
 class Bill:
@@ -73,7 +81,7 @@ class Bill:
     myName = None
     myDueDay = None
     myNextDueDate = None
-    myAmountDue = None
+    myAmount = None
 
     def __init__(self, theName, theDueDay, theNextDueDate, theAmountDue):
         """
@@ -83,7 +91,7 @@ class Bill:
         :param theAmountDue: the cost of the bill (int/float)
         """
         self.myName = theName
-        self.myAmountDue = theAmountDue
+        self.myAmount = theAmountDue
         self.myDueDay = theDueDay
         self.myNextDueDate = theNextDueDate
 
@@ -92,9 +100,9 @@ class Bill:
         :return: The string representation of a Bill
         """
         return "Name: %s\nDue Day: %s\nNext Due Date: %s\nAmount Due: %s\n" % (
-        self.myName, self.myDueDay, self.myNextDueDate, self.myAmountDue)
+        self.myName, self.myDueDay, self.myNextDueDate, self.myAmount)
 
-    def getDueDatesForRange(self, theStartDate, theEndDate):
+    def getDatesForRange(self, theStartDate, theEndDate):
         """
         Returns a list of all the dates the bill is due given a date range
         :param theStartDate: the starting date range
@@ -218,6 +226,74 @@ def deleteFile(theObjectToDelete):
     except:
         print("Delete failed...")
 
+def createBillReportTupleList(theStartDate, theEndDate, theBillList, theIncomeList):
+    """
+    Creates the report of all bills due and when incomes are recieved
+    :param theStartDate: starting date range we want to plan for
+    :param theEndDate: ending date range we want to plan for
+    :param theBillList: a list of bill objects
+    :param theIncomeList: a list of income objects
+    :return:
+    """
+    listToReturn = []
+
+
+
+
+
+
+    return listToReturn
+
+
+
+def generateBillPayReport(theStartDate, theEndDate, theBillList, theIncomeList):
+    """
+    Creates the report of all bills due and when incomes are received
+    :param theStartDate: starting date range we want to plan for
+    :param theEndDate: ending date range we want to plan for
+    :param theBillList: a list of bill objects
+    :param theIncomeList: a list of income objects
+    :return:
+    """
+    listToReturn = []
+    for bill in theBillList: #add all bills with dates
+        dates = bill.getDatesForRange(theStartDate, theEndDate)
+
+        for date in dates:
+            tup = (bill, date)
+            listToReturn.append(tup)
+
+    for income in theIncomeList: # add all incomes with dates
+        dates = income.getDatesForRange(theStartDate, theEndDate)
+
+        for date in dates:
+            tup = (income, date)
+            listToReturn.append(tup)
+
+
+    listToReturn.sort(key=lambda tup: tup[1], reverse=True) #sort in by dates in reverse order
+
+    formatedList = []
+    purse = 0
+    while (listToReturn):
+        element = listToReturn.pop()
+        date = element[1]
+        if element[0].__class__ is Income:
+            tup = ("Balance: ", purse)
+            formatedList.append(tup)
+            purse = element[0].myAmount
+        else:
+           purse -= element[0].myAmount
+
+        tup = (element[0].myName, element[0].myAmount, date)
+        formatedList.append(tup)
+
+
+    listToReturn = formatedList
+
+    with open("Bill Report.csv", "w") as file:
+        wr = csv.writer(file, dialect='excel')
+        wr.writerows(listToReturn)
 
 def sandbox():
     """
@@ -225,32 +301,32 @@ def sandbox():
     :return:
     """
     # testIncome = inputAnIncome()
+
     incomes = []
 
-    incomes.append(Income("Metagenics", [14], 1100, datetime.date(2018, 3, 23)))
-    incomes.append(Income("CleanStart", [7, 22], 1100, datetime.date(2018, 3, 22)))
+    incomes.append(Income("O'Blaneys", [14], 1100, datetime.date(2018, 3, 23)))
+    incomes.append(Income("Jackie's BBQ Put", [7, 22], 1100, datetime.date(2018, 3, 22)))
 
     saveToFile(incomes[0])
     saveToFile(incomes[1])
 
     bills = []
 
-    bills.append(Bill("Phone Bill", 9, datetime.date(2018, 4, 9), 120))
-    bills.append(Debt("Student Loan", 9, datetime.date(2018, 4, 9), 300, 40000, .05))
+    bills.append(Bill("Phone Bill", 9, datetime.date(2018, 5, 9), 120))
+    bills.append(Bill("Rent", 1, datetime.date(2018,5,1), 500))
+    bills.append(Bill("Avlis Student Loan", 6, datetime.date(2018,5,6), 200))
+    bills.append(Bill("Rohan Car Loan", 6, datetime.date(2018, 5, 6), 226))
+    bills.append(Bill("Upstart Loan", 18, datetime.date(2018,5,18), 700))
+    bills.append(Bill("Avlis Car Loan", 19, datetime.date(2018,5,19), 260))
+    bills.append(Bill("Rohan Student Loan", 20, datetime.date(2018,5,20), 300))
 
-    saveToFile(bills[0])
-    saveToFile(bills[1])
+    for bill in bills:
+        saveToFile(bill)
 
-    bills[0] = openFile("Debts\Student Loan.txt")
-    bills[1] = openFile("Bills\Phone Bill.txt")
+    generateBillPayReport(datetime.date(2018, 1, 1), datetime.date(2018, 12, 31), bills, incomes)
 
-    print(bills[0].getDueDatesForRange(datetime.date(2018, 1, 1), datetime.date(2018, 12, 31)))
-    print(bills[0].getDueDatesForRange(datetime.date(2019, 1, 1), datetime.date(2019, 12, 31)))
-    print(bills[0].getDueDatesForRange(datetime.date(2017, 1, 1), datetime.date(2017, 12, 31)))
 
-    print(bills[1].getDueDatesForRange(datetime.date(2018, 1, 1), datetime.date(2018, 12, 31)))
-    print(bills[1].getDueDatesForRange(datetime.date(2019, 1, 1), datetime.date(2019, 12, 31)))
-    print(bills[1].getDueDatesForRange(datetime.date(2017, 1, 1), datetime.date(2017, 12, 31)))
-
+    print(len(incomes[1].myDays))
+    print(incomes[1].getDatesForRange(datetime.date(2018, 1, 1), datetime.date(2018, 12, 31)))
 
 sandbox()
